@@ -904,20 +904,60 @@ Qed.
     lists of numbers for equality.  Prove that [beq_natlist l l]
     yields [true] for every list [l]. *)
 
+Fixpoint beq_nat (n m : nat) : bool :=
+  match n with
+  | O => match m with
+         | O => true
+         | S m' => false
+         end
+  | S n' => match m with
+            | O => false
+            | S m' => beq_nat n' m'
+            end
+  end.
+
 Fixpoint beq_natlist (l1 l2 : natlist) : bool :=
-  (* FILL IN HERE *) admit.
+  match l1 with
+  | nil => match l2 with
+           | nil => true
+           | h :: t => false 
+           end
+  | h :: t => match (beq_nat h (hd 0 l2)) with 
+               | true => beq_natlist t (tl l2)
+               | false => false
+               end
+  end.
 
 Example test_beq_natlist1 :   (beq_natlist nil nil = true).
- (* FILL IN HERE *) Admitted.
+ simpl. reflexivity. Qed.
 Example test_beq_natlist2 :   beq_natlist [1;2;3] [1;2;3] = true.
- (* FILL IN HERE *) Admitted.
+ simpl. reflexivity. Qed.
 Example test_beq_natlist3 :   beq_natlist [1;2;3] [1;2;4] = false.
- (* FILL IN HERE *) Admitted.
+ simpl. reflexivity. Qed.
+
+Lemma beq_nat_refl : forall n:nat,
+  beq_nat n n = true.
+Proof.
+  intros.
+  induction n as [|n'].
+  (*case n=O*)
+  reflexivity.
+  (*case n=S n'*)
+  simpl. rewrite -> IHn'. reflexivity.
+Qed.
 
 Theorem beq_natlist_refl : forall l:natlist,
   true = beq_natlist l l.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction l as [|n l'].
+  (*case l=nil*)
+  simpl. reflexivity.
+  (*case l=n l'*)
+  simpl. rewrite -> beq_nat_refl.
+  rewrite <- IHl'.
+  reflexivity.
+Qed.
+
 (** [] *)
 
 (* ###################################################### *)
