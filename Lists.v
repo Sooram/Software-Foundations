@@ -976,10 +976,21 @@ Qed.
 (** Here are a couple of little theorems to prove about your
     definitions about bags earlier in the file. *)
 
+Fixpoint ble_nat (n m : nat) : bool :=
+  match n with
+  | O => true
+  | S n' =>
+      match m with
+      | O => false
+      | S m' => ble_nat n' m'
+      end
+  end.
+
 Theorem count_member_nonzero : forall (s : bag),
   ble_nat 1 (count 1 (1 :: s)) = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. simpl. reflexivity.
+Qed.
 
 (** The following lemma about [ble_nat] might help you in the next proof. *)
 
@@ -987,15 +998,26 @@ Theorem ble_n_Sn : forall n,
   ble_nat n (S n) = true.
 Proof.
   intros n. induction n as [| n'].
-  Case "0".  
+  (*Case "0".*)  
     simpl.  reflexivity.
-  Case "S n'".
+  (*Case "S n'".*)
     simpl.  rewrite IHn'.  reflexivity.  Qed.
 
 Theorem remove_decreases_count: forall (s : bag),
   ble_nat (count 0 (remove_one 0 s)) (count 0 s) = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction s as [|n s'].
+  (*s=nil*)
+  simpl. reflexivity.
+  (*s=n s'*)
+  induction n as [| n'].
+    (*n=0*)
+    simpl. rewrite -> ble_n_Sn.
+    reflexivity.
+    (*n=S n'*)
+    simpl. rewrite -> IHs'.
+    reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, optional (bag_count_sum)  *)  
@@ -1006,14 +1028,19 @@ Proof.
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (rev_injective)  *)
-(** Prove that the [rev] function is injective, that is,
+(** Prove that the [rev] function is injective, that is,*)
 
-    forall (l1 l2 : natlist), rev l1 = rev l2 -> l1 = l2.
-
-There is a hard way and an easy way to solve this exercise.
+(*There is a hard way and an easy way to solve this exercise.
 *)
 
-(* FILL IN HERE *)
+Theorem rev_injective: forall (l1 l2 : natlist), 
+  rev l1 = rev l2 -> l1 = l2.
+Proof.
+  intros. rewrite <- rev_involutive. 
+  rewrite <- H. 
+  rewrite -> rev_involutive.
+  reflexivity.
+Qed.
 (** [] *)
 
 
@@ -1097,16 +1124,19 @@ Definition option_elim (d : nat) (o : natoption) : nat :=
    have to pass a default element for the [nil] case.  *)
 
 Definition hd_opt (l : natlist) : natoption :=
-  (* FILL IN HERE *) admit.
+  match l with
+  | nil => None
+  | a :: l' => Some a
+  end.
 
 Example test_hd_opt1 : hd_opt [] = None.
- (* FILL IN HERE *) Admitted.
+ Proof. reflexivity. Qed.
 
 Example test_hd_opt2 : hd_opt [1] = Some 1.
- (* FILL IN HERE *) Admitted.
+ Proof. reflexivity. Qed.
 
 Example test_hd_opt3 : hd_opt [5;6] = Some 5.
- (* FILL IN HERE *) Admitted.
+ Proof. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 1 star, optional (option_elim_hd)  *)
@@ -1115,7 +1145,12 @@ Example test_hd_opt3 : hd_opt [5;6] = Some 5.
 Theorem option_elim_hd : forall (l:natlist) (default:nat),
   hd default l = option_elim default (hd_opt l).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. destruct l as [|n l'].
+  (*l=nil*)
+  simpl. reflexivity.
+  (*l=n l'*)
+  simpl. reflexivity.
+Qed.
 (** [] *)
 
 (* ###################################################### *)
@@ -1164,7 +1199,10 @@ Fixpoint find (key : nat) (d : dictionary) : natoption :=
 Theorem dictionary_invariant1' : forall (d : dictionary) (k v: nat),
   (find k (insert k v d)) = Some v.
 Proof.
- (* FILL IN HERE *) Admitted.
+  intros. simpl.
+  rewrite -> beq_nat_refl.
+  reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 1 star (dictionary_invariant2)  *)
@@ -1173,7 +1211,8 @@ Proof.
 Theorem dictionary_invariant2' : forall (d : dictionary) (m n o: nat),
   beq_nat m n = false -> find m d = find m (insert n o d).
 Proof.
- (* FILL IN HERE *) Admitted.
+  intros. simpl. rewrite -> H. reflexivity.
+Qed. 
 (** [] *)
 
 
