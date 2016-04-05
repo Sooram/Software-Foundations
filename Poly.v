@@ -626,6 +626,9 @@ Definition doit3times {X:Type} (f:X->X) (n:X) : X :=
 Check @doit3times.
 (* ===> doit3times : forall X : Type, (X -> X) -> X -> X *)
 
+Definition minustwo (n:nat) : nat :=
+  n-2.
+
 Example test_doit3times: doit3times minustwo 9 = 3.
 Proof. reflexivity.  Qed.
 
@@ -690,24 +693,29 @@ Definition prod_curry {X Y Z : Type}
 
 Definition prod_uncurry {X Y Z : Type}
   (f : X -> Y -> Z) (p : X * Y) : Z :=
-  (* FILL IN HERE *) admit.
+  f (fst p) (snd p).
 
 (** (Thought exercise: before running these commands, can you
     calculate the types of [prod_curry] and [prod_uncurry]?) *)
 
 Check @prod_curry.
+(*     : forall X Y Z : Type, (X * Y -> Z) -> X -> Y -> Z*)
 Check @prod_uncurry.
+(*     : forall X Y Z : Type, (X -> Y -> Z) -> X * Y -> Z*)
 
 Theorem uncurry_curry : forall (X Y Z : Type) (f : X -> Y -> Z) x y,
   prod_curry (prod_uncurry f) x y = f x y.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. compute. reflexivity.
+Qed.
 
 Theorem curry_uncurry : forall (X Y Z : Type)
                                (f : (X * Y) -> Z) (p : X * Y),
   prod_uncurry (prod_curry f) p = f p.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. destruct p.
+ compute. reflexivity.
+Qed.
 (** [] *)
 
 (* ###################################################### *)
@@ -730,8 +738,15 @@ Fixpoint filter {X:Type} (test: X->bool) (l:list X)
     and a list of numbers [l], it returns a list containing just the
     even members of [l]. *)
 
+Fixpoint evenb (n:nat) : bool :=
+  match n with
+  | O => true
+  | S O => false
+  | S (S n') => evenb n'
+  end.
+
 Example test_filter1: filter evenb [1;2;3;4] = [2;4].
-Proof. reflexivity.  Qed.
+Proof. simpl. reflexivity.  Qed.
 
 (** *** *)
 Definition length_is_1 {X : Type} (l : list X) : bool :=
@@ -747,6 +762,12 @@ Proof. reflexivity.  Qed.
 
 (** We can use [filter] to give a concise version of the
     [countoddmembers] function from the [Lists] chapter. *)
+
+Definition oddb (n:nat) : bool :=
+  match evenb n with
+  | true => false
+  | false => true
+  end.
 
 Definition countoddmembers' (l:list nat) : nat :=
   length (filter oddb l).
@@ -795,16 +816,26 @@ Proof. reflexivity.  Qed.
     and returns a list of just those that are even and greater than
     7. *)
 
+Fixpoint ble_nat (n m : nat) : bool :=
+  match n with
+  | O => true
+  | S n' =>
+      match m with
+      | O => false
+      | S m' => ble_nat n' m'
+      end
+  end.
+
 Definition filter_even_gt7 (l : list nat) : list nat :=
-  (* FILL IN HERE *) admit.
+  filter (fun n => if ble_nat n 7 then false else evenb n) l.
 
 Example test_filter_even_gt7_1 :
   filter_even_gt7 [1;2;6;9;10;3;12;8] = [10;12;8].
- (* FILL IN HERE *) Admitted.
+  Proof. compute. reflexivity. Qed.
 
 Example test_filter_even_gt7_2 :
   filter_even_gt7 [5;2;6;19;129] = [].
- (* FILL IN HERE *) Admitted.
+  Proof. compute. reflexivity. Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars (partition)  *)
@@ -820,14 +851,20 @@ Example test_filter_even_gt7_2 :
    list.
 *)
 
+Definition negb (b:bool) : bool := 
+  match b with
+  | true => false
+  | false => true
+  end.
+
 Definition partition {X : Type} (test : X -> bool) (l : list X)
                      : list X * list X :=
-(* FILL IN HERE *) admit.
+  pair (filter test l) (filter (fun x => negb(test x)) l).
 
 Example test_partition1: partition oddb [1;2;3;4;5] = ([1;3;5], [2;4]).
-(* FILL IN HERE *) Admitted.
+  Proof. compute. reflexivity. Qed.
 Example test_partition2: partition (fun x => false) [5;9;0] = ([], [5;9;0]).
-(* FILL IN HERE *) Admitted.
+  Proof. compute. reflexivity. Qed.
 (** [] *)
 
 (* ###################################################### *)
@@ -874,11 +911,26 @@ Proof. reflexivity.  Qed.
 (** Show that [map] and [rev] commute.  You may need to define an
     auxiliary lemma. *)
 
+Lemma map_snoc : forall (X Y : Type) (f : X -> Y) (l : list X) (n : X),
+  map f (snoc l n) = snoc (map f l) (f n).
+Proof.
+  intros. induction l as [|m l'].
+  (*l=nil*)
+  simpl. reflexivity.
+  (*l=m l'*)
+  simpl. rewrite -> IHl'. reflexivity.
+Qed.
 
 Theorem map_rev : forall (X Y : Type) (f : X -> Y) (l : list X),
   map f (rev l) = rev (map f l).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. induction l as [|n l'].
+  (*l=nil*)
+  simpl. reflexivity.
+  (*l=n l'*)
+  simpl. rewrite -> map_snoc.
+  rewrite -> IHl'. reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars (flat_map)  *)
@@ -893,12 +945,15 @@ Proof.
 
 Fixpoint flat_map {X Y:Type} (f:X -> list Y) (l:list X)
                    : (list Y) :=
-  (* FILL IN HERE *) admit.
+  match l with
+  | nil => nil
+  | h :: t => (f h) ++ (flat_map f t)
+  end.
 
 Example test_flat_map1:
   flat_map (fun n => [n;n;n]) [1;5;4]
   = [1; 1; 1; 5; 5; 5; 4; 4; 4].
- (* FILL IN HERE *) Admitted.
+  Proof. simpl. reflexivity. Qed.
 (** [] *)
 
 (** Lists are not the only inductive type that we can write a
@@ -1032,7 +1087,8 @@ Proof. reflexivity. Qed.
 Theorem override_example : forall (b:bool),
   (override (constfun b) 3 true) 2 = b.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. reflexivity.
+Qed.
 (** [] *)
 
 (** We'll use function overriding heavily in parts of the rest of the
@@ -1082,12 +1138,23 @@ Proof.
     override a function at some argument [k] and then look up [k], we
     get back the overridden value. *)
 
+Lemma beq_nat_refl : forall n:nat,
+  beq_nat n n = true.
+Proof.
+  intros.
+  induction n as [|n'].
+  (*case n=O*)
+  reflexivity.
+  (*case n=S n'*)
+  simpl. rewrite -> IHn'. reflexivity.
+Qed.
+
 Theorem override_eq : forall {X:Type} x k (f:nat->X),
   (override f k x) k = x.
 Proof.
   intros X x k f.
   unfold override.
-  rewrite <- beq_nat_refl.
+  rewrite -> beq_nat_refl.
   reflexivity.  Qed.
 
 (** This proof was straightforward, but note that it requires
@@ -1099,7 +1166,10 @@ Theorem override_neq : forall (X:Type) x1 x2 k1 k2 (f : nat->X),
   beq_nat k2 k1 = false ->
   (override f k2 x2) k1 = x1.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. unfold override.
+  rewrite -> H0. rewrite -> H.
+  reflexivity.
+Qed.
 (** [] *)
 
 (** As the inverse of [unfold], Coq also provides a tactic
@@ -1123,33 +1193,56 @@ Proof. reflexivity. Qed.
 
 Theorem fold_length_correct : forall X (l : list X),
   fold_length l = length l.
-(* FILL IN HERE *) Admitted.
-(** [] *)
-
+Proof.
+  intros. induction l as [|n l'].
+  (*l=nil*)
+  unfold fold_length. simpl. reflexivity.
+  (*l=n l'*)
+  simpl. rewrite <- IHl'. unfold fold_length. simpl. reflexivity.
+Qed.
 (** **** Exercise: 3 stars (fold_map)  *)
 (** We can also define [map] in terms of [fold].  Finish [fold_map]
     below. *)
 
 Definition fold_map {X Y:Type} (f : X -> Y) (l : list X) : list Y :=
-(* FILL IN HERE *) admit.
+  fold (fun x y => f x :: y) l [].
 
 (** Write down a theorem [fold_map_correct] in Coq stating that
    [fold_map] is correct, and prove it. *)
 
-(* FILL IN HERE *)
+Theorem fold_map_correct : forall (X Y : Type) (f : X -> Y) (l : list X),
+  fold_map f l = map f l.
+Proof.
+  intros. induction l as [|n l'].
+  (*l=nil*)
+  unfold fold_map. simpl. reflexivity.
+  (*l=n l'*)
+  simpl. rewrite <- IHl'. unfold fold_map. simpl. reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 2 stars, advanced (index_informal)  *)
-(** Recall the definition of the [index] function:
-   Fixpoint index {X : Type} (n : nat) (l : list X) : option X :=
-     match l with
-     | [] => None 
-     | a :: l' => if beq_nat n O then Some a else index (pred n) l'
-     end.
-   Write an informal proof of the following theorem:
-   forall X n l, length l = n -> @index X n l = None.
-(* FILL IN HERE *)
+(** Recall the definition of the [index] function: *)
+(*
+Fixpoint index {X : Type} (n : nat) (l : list X) : option X :=
+  match l with
+  | [] => None 
+  | a :: l' => if beq_nat n O then Some a else index (pred n) l'
+  end.
+(** Write an informal proof of the following theorem: *)
 *)
+Theorem index_proof : forall X n l, 
+  length l = n -> @index X n l = None.
+Proof.
+  intros. generalize dependent n.
+  induction l as [|m l'].
+  (*l=nil*)
+  simpl. reflexivity.
+  (*l=m l'*)
+  simpl. intros. rewrite <- H.
+  apply IHl'. reflexivity.
+Qed.
+  
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (church_numerals)  *)
