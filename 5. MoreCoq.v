@@ -1217,7 +1217,14 @@ Qed.
 Theorem beq_nat_sym : forall (n m : nat),
   beq_nat n m = beq_nat m n.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n. induction n as [| n'].
+  intros. destruct m as [| m'].
+  simpl. reflexivity.
+  simpl. reflexivity.
+  intros. destruct m as [| m'].
+  simpl. reflexivity.
+  simpl. apply IHn'.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced, optional (beq_nat_sym_informal)  *)
@@ -1232,12 +1239,25 @@ Proof.
  *)
 
 (** **** Exercise: 3 stars, optional (beq_nat_trans)  *)
+Lemma beq_nat_eq : forall n m,
+  n = m -> beq_nat n m = true.
+Proof. 
+  intros n. induction n.
+  destruct m. simpl. reflexivity. 
+  intros. inversion H.
+  destruct m. intros. inversion H.
+  simpl. intros. apply IHn. inversion H. reflexivity.
+Qed.
+
 Theorem beq_nat_trans : forall n m p,
   beq_nat n m = true ->
   beq_nat m p = true ->
   beq_nat n p = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros n m p H1. apply beq_nat_true in H1.
+  intros H2. apply beq_nat_true in H2.
+  rewrite H2 in H1. apply beq_nat_eq. apply H1. 
+Qed. 
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (split_combine)  *)
@@ -1251,16 +1271,27 @@ Proof.
     your induction hypothesis general by not doing [intros] on more
     things than necessary.  Hint: what property do you need of [l1]
     and [l2] for [split] [combine l1 l2 = (l1,l2)] to be true?)  *)
+Check split.
+(*list (?2173 * ?2174) -> list ?2173 * list ?2174*)
+Check combine.
+(*list ?2175 -> list ?2176 -> list (?2175 * ?2176)*)
 
 Definition split_combine_statement : Prop :=
-(* FILL IN HERE *) admit.
+  forall (X:Type) (l1 l2: list X), 
+  length l1 = length l2 ->
+  split (combine l1 l2) = (l1, l2).
 
 Theorem split_combine : split_combine_statement.
 Proof.
-(* FILL IN HERE *) Admitted.
-
-
-
+  unfold split_combine_statement. intros X. induction l1 as [|n l1'].
+  intros. simpl. destruct l2 as [|m l2'].
+  reflexivity.
+  inversion H.
+  intros. destruct l2 as [|m l2'].
+  simpl. inversion H.
+  simpl. rewrite IHl1'.
+  reflexivity.
+  inversion H. reflexivity.
 (** [] *)
 
 (** **** Exercise: 3 stars (override_permute)  *)
@@ -1268,48 +1299,102 @@ Theorem override_permute : forall (X:Type) x1 x2 k1 k2 k3 (f : nat->X),
   beq_nat k2 k1 = false ->
   (override (override f k2 x2) k1 x1) k3 = (override (override f k1 x1) k2 x2) k3.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. unfold override.
+  destruct (beq_nat k1 k3) eqn:Heq13.
+  (*k1=k3*) (*k2 cannot be equal to k3, so x1*)
+    apply beq_nat_true in Heq13. rewrite Heq13 in H. rewrite H. reflexivity.
+  reflexivity.
+Qed.
 (** [] *)
 
 (** **** Exercise: 3 stars, advanced (filter_exercise)  *)
 (** This one is a bit challenging.  Pay attention to the form of your IH. *)
+
+Fixpoint filter {X:Type} (test: X->bool) (l:list X)
+                : (list X) :=
+  match l with
+  | []     => []
+  | h :: t => if test h then h :: (filter test t)
+                        else       filter test t
+  end.
 
 Theorem filter_exercise : forall (X : Type) (test : X -> bool)
                              (x : X) (l lf : list X),
      filter test l = x :: lf ->
      test x = true.
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros X test x l. revert x. induction l as [|n l']. 
+  simpl. intros. inversion H.
+  simpl. destruct (test n) eqn:Htn.
+  intros. assert(H' : n = x). inversion H. reflexivity. 
+  rewrite H' in Htn. apply Htn.
+  apply IHl'.
+Qed. 
 (** [] *)
 
 (** **** Exercise: 4 stars, advanced (forall_exists_challenge)  *)
 (** Define two recursive [Fixpoints], [forallb] and [existsb].  The
     first checks whether every element in a list satisfies a given
     predicate:
-      forallb oddb [1;3;5;7;9] = true
+*)
+Fixpoint forallb {X:Type} (test: X->bool) (l:list X) : bool :=
+  match l with
+  | nil => true
+  | h :: t => match (test h) with
+              | false => false
+              | true => (forallb test t)
+              end
+  end.
 
-      forallb negb [false;false] = true
-  
-      forallb evenb [0;2;4;5] = false
-  
-      forallb (beq_nat 5) [] = true
-    The second checks whether there exists an element in the list that
+Example test_forallb1 : forallb oddb [1;3;5;7;9] = true.
+Proof. simpl. reflexivity. Qed.
+Example test_forallb2 : forallb negb [false;false] = true.
+Proof. reflexivity. Qed.
+Example test_forallb3 : forallb evenb [0;2;4;5] = false.
+Proof. auto. Qed.
+Example test_forallb4 : forallb (beq_nat 5) [] = true.
+Proof. auto. Qed.
+(** The second checks whether there exists an element in the list that
     satisfies a given predicate:
-      existsb (beq_nat 5) [0;2;3;6] = false
- 
-      existsb (andb true) [true;true;false] = true
- 
-      existsb oddb [1;0;0;0;0;3] = true
- 
-      existsb evenb [] = false
-    Next, define a _nonrecursive_ version of [existsb] -- call it
+*) 
+Fixpoint existsb {X:Type} (test:X->bool) (l:list X) : bool :=
+  match l with 
+  | nil => false
+  | h :: t => match (test h) with
+              | true => true
+              | false => existsb test t
+              end
+  end.
+
+Example test_existsb1 : existsb (beq_nat 5) [0;2;3;6] = false.
+Proof. auto. Qed.
+Example test_existsb2 : existsb (andb true) [true;true;false] = true.
+Proof. auto.
+Example test_existsb3 : existsb oddb [1;0;0;0;0;3] = true.
+Proof. auto.
+Example test_existsb4 : existsb evenb [] = false.
+auto.
+
+(** Next, define a _nonrecursive_ version of [existsb] -- call it
     [existsb'] -- using [forallb] and [negb].
- 
-    Prove theorem [existsb_existsb'] that [existsb'] and [existsb] have
+*)
+Definition existsb' {X:Type} (test:X->bool) (l:list X) : bool :=
+  negb (forallb (fun x => negb (test x)) l).
+
+(*  Prove theorem [existsb_existsb'] that [existsb'] and [existsb] have
     the same behavior.
 *)
+Theorem existsb_existsb' : forall {X:Type} (test:X->bool) (l:list X),
+  existsb test l = existsb' test l.
+Proof.
+  intros. induction l as [|n l']. 
+  simpl. unfold existsb'. simpl. reflexivity.
+  simpl. destruct (test n) eqn:H.
+  unfold existsb'. simpl. rewrite H. simpl. reflexivity.
+  unfold existsb'. simpl. rewrite H. simpl. rewrite IHl'. 
+  unfold existsb'. reflexivity.
+Qed.
 
-(* FILL IN HERE *)
 (** [] *)
 
 (** $Date: 2014-12-31 16:01:37 -0500 (Wed, 31 Dec 2014) $ *)
