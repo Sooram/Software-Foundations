@@ -923,29 +923,74 @@ Proof.
   unfold lt. intros. apply le_S. apply H.
 Qed.
 
+Fixpoint ble_nat (n m : nat) : bool :=
+  match n with
+  | O => true
+  | S n' =>
+      match m with
+      | O => false
+      | S m' => ble_nat n' m'
+      end
+  end.
+
 Theorem ble_nat_true : forall n m,
   ble_nat n m = true -> n <= m.
 Proof. 
-  (* FILL IN HERE *) Admitted.
+  induction n as [| n'].
+  intros. apply O_le_n.
+  destruct m as [| m'].
+  intros. inversion H.
+  intros.
+  apply n_le_m__Sn_le_Sm.
+  apply IHn'. simpl in H. apply H.
+Qed.
+
+Lemma ble_nat_refl : forall n,
+  ble_nat n n = true.
+Proof.
+  intros. induction n as [| n'].
+  reflexivity.
+  simpl. apply IHn'.
+Qed.
+
+Lemma ble_nat_succ : forall n m,
+  ble_nat n m = true -> ble_nat n (S m) = true.
+Proof.
+  induction n. reflexivity.
+  intros. destruct m.
+  inversion H.
+  simpl. apply IHn. simpl in H. apply H.
+Qed.
 
 Theorem le_ble_nat : forall n m,
   n <= m ->
   ble_nat n m = true.
 Proof.
   (* Hint: This may be easiest to prove by induction on [m]. *)
-  (* FILL IN HERE *) Admitted.
+  induction m.
+  intros. inversion H. reflexivity.
+  intros. inversion H. apply ble_nat_refl.
+  destruct n. reflexivity.
+  subst. apply ble_nat_succ. apply IHm. apply H1.
+Qed.  
 
 Theorem ble_nat_true_trans : forall n m o,
   ble_nat n m = true -> ble_nat m o = true -> ble_nat n o = true.                               
 Proof.
   (* Hint: This theorem can be easily proved without using [induction]. *)
-  (* FILL IN HERE *) Admitted.
+  intros. apply ble_nat_true in H. apply ble_nat_true in H0.
+  apply le_ble_nat. apply le_trans with (m:=n) (n:=m). 
+  apply H. apply H0.
+Qed.
 
 (** **** Exercise: 2 stars, optional (ble_nat_false)  *)
 Theorem ble_nat_false : forall n m,
   ble_nat n m = false -> ~(n <= m).
 Proof.
-  (* FILL IN HERE *) Admitted.
+  intros. unfold not. intros.
+  apply le_ble_nat in H0.
+  rewrite H in H0. inversion H0.
+Qed.
 (** [] *)
 
 
